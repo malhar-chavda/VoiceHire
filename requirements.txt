@@ -1,0 +1,29 @@
+# AI & Graph Orchestration
+langchain>=0.3.0
+langchain-openai>=0.2.0
+langgraph>=0.2.0
+python-dotenv>=1.0.1
+
+# Web Server & API
+fastapi>=0.110.0
+uvicorn>=0.27.0
+pydantic>=2.6.0
+
+# Database & Persistence  
+sqlalchemy>=2.0.25   
+alembic>=1.13.0
+psycopg2-binary>=2.9.9
+
+# Utilities
+python-multipart>=0.0.9
+httpx>=0.27.0
+
+# PostgreSQL
+psycopg2-binary
+sqlalchemy
+asyncpg
+
+# Vector DB
+chromadb
+langchain-community
+azure-communication-email
