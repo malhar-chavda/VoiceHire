@@ -53,3 +53,8 @@ checkpoints.db
 # OS specific
 .DS_Store
 Thumbs.db
+
+
+# git add .
+# git commit -m "Brief description of what you added or fixed today"
+# git push
