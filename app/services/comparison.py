@@ -1,45 +1,37 @@
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
 from app.services.azure_openai import azure_openai
-from app.prompts.matching import COMPARISON_PROMPT  # The ChatPromptTemplate we created
-from app.models.comparison_model import ComparisonSchema  # The Pydantic model
+from app.prompts.matching import COMPARISON_PROMPT
+from app.models.comparison_model import ComparisonSchema
 
 logger = logging.getLogger(__name__)
 
-async def evaluate_candidate_match( 
-    resume_json: dict[str, Any], 
-    jd_json: dict[str, Any]
-) -> ComparisonSchema:
-    """
-    Takes structured JSONs, compares them using LangChain AzureChatOpenAI,
-    and returns a validated ComparisonSchema object.
-    """
-    logger.info("Initializing Azure OpenAI (Smart) for Match & Gap analysis")
-    
-    try:
-        #Get the langchain LLM (using smart for high-reasoning comparison)
-        llm = azure_openai.smart_llm
-        
-        #Bind the pydantic schema for structured output
-        structured_llm = llm.with_structured_output(ComparisonSchema)
-        
-        #Create the langchain chain (prompt -> LLM)
+
+class MatchingService:
+    """Compares a candidate's resume against a job description using the LLM."""
+
+    async def evaluate(
+        self,
+        resume_json: dict[str, Any],
+        jd_json: dict[str, Any],
+    ) -> ComparisonSchema:
+        """Run LLM match and return a structured ComparisonSchema result."""
+        resume_str = json.dumps(resume_json, indent=2)
+        jd_str = json.dumps(jd_json, indent=2)
+
+        structured_llm = azure_openai.smart_llm.with_structured_output(ComparisonSchema)
         chain = COMPARISON_PROMPT | structured_llm
+
+        try:
+            result = await chain.ainvoke({"resume_json": resume_str, "jd_json": jd_str})
+            logger.info("Match score: %.1f", result.overall_match_score)
+            return result
+        except Exception as exc:
+            logger.error("MatchingService.evaluate failed: %s", exc)
+            raise
         
-        #Execute the chain
-        #pass the dicts directly; langchain handles the string injection into the template
-        evaluation_result = await chain.ainvoke({    #non-streaming!
-            "resume_json": resume_json,
-            "jd_json": jd_json
-        })
-        
-        logger.info(f"Analysis complete. Match Score: {evaluation_result.overall_match_score}%")
-        
-        return evaluation_result
-        
-    except Exception as exc:
-        logger.error(f"Failed to evaluate candidate match: {exc}")
-        raise
+matching_service = MatchingService()

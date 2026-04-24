@@ -15,7 +15,8 @@ class AzureOpenAIManager:
             api_key=settings.AZURE_OPENAI_API_KEY,
             azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
             api_version="2024-08-01-preview",
-            temperature=0.0,
+            temperature=0.2,
+            timeout=60,
         )
         
         self.fast_llm = AzureChatOpenAI(
@@ -23,7 +24,8 @@ class AzureOpenAIManager:
             api_key=settings.AZURE_OPENAI_API_KEY,
             azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
             api_version="2024-08-01-preview",
-            temperature=0.0,
+            temperature=0.2,
+            timeout=60,
         )
 
     async def extract_structured_data(
@@ -41,6 +43,9 @@ class AzureOpenAIManager:
         chain = prompt_template | structured_llm
         invoke_args = {"raw_text": raw_text}
         invoke_args.update(kwargs)
-        return await chain.ainvoke(invoke_args)
+        # logger.info("EXTRACTING FROM: %s", raw_text[:200])
+        res = await chain.ainvoke(invoke_args)
+        # logger.info("EXTRACTED DATA: %s", res.model_dump_json())
+        return res
 
 azure_openai = AzureOpenAIManager()

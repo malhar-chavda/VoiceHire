@@ -19,15 +19,11 @@ Rules:
 """
 
 from __future__ import annotations
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from utils.constants import (
+from app.utils.constants import (
     DEFAULT_LLM_MODEL,
     INTERVIEW_LINK_EXPIRY_HOURS,
     MAX_FOLLOWUPS_PER_QUESTION,
@@ -62,6 +58,11 @@ class Settings(BaseSettings):
     FOLLOW_UP_THRESHOLD: float = 7.0  # Out of 10
     MAX_FOLLOW_UPS: int = 2           # Prevent infinite loops
 
+    #  GOOGLE GEMINI 
+    # Used for Realtime Speech-to-Speech loop
+    GEMINI_API_KEY: str = ""
+
+
     #  AZURE OPENAI 
     # Used by: services/azure_openai.py
 
@@ -93,8 +94,9 @@ class Settings(BaseSettings):
     # Sub-folders: jd/, resume/, audio/, reports/
 
     #  AZURE COMMUNICATION SERVICES (EMAIL) 
-    AZURE_COMMUNICATION_CONNECTION_STRING: str = ""
-    AZURE_SENDER_EMAIL: str = "DoNotReply@YOUR-DOMAIN.com"
+    AZURE_COMMUNICATION_CONNECTION_STRING: str = "endpoint=...;accesskey=..."
+    AZURE_SENDER_EMAIL: str = "donotreply@yourdomain.azurecomm.net"
+
 
     #  AZURE POSTGRESQL 
     # Used by: services/postgres_db.py
@@ -128,15 +130,27 @@ class Settings(BaseSettings):
     # Used by: app/main.py
 
     APP_HOST: str = "0.0.0.0"
-    APP_PORT: int = 8000
+    APP_PORT: int = 8006 
     APP_ENV: str = "development"
     # "development" | "staging" | "production"
+
+    FRONTEND_BASE_URL: str = "http://localhost:3000"
+    # The public-facing URL of the frontend app.
+    # Used to build interview links sent via email.
+    # Example (production): https://app.voicehire.io
+
 
     SECRET_KEY: str = "change-this-before-production"
     # Generate with: python -c "import secrets; print(secrets.token_hex(32))"
     # MUST be overridden in production .env
 
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    JWT_ALGORITHM: str = "HS256"
+
+    #  RECRUITER AUTH (Single User)
+    RECRUITER_USERNAME: str = "admin"
+    RECRUITER_PASSWORD: str = "admin123" 
+    # Must be hashed in production, but for simplicity we allow plain-text override in .env
 
     #PIPELINE THRESHOLDS 
     # Overrides utils/constants.py defaults — change via .env without touching code
@@ -161,7 +175,7 @@ class Settings(BaseSettings):
 
     #  COMPUTED PROPERTIES 
     
-    @property
+    @property   
     def is_production(self) -> bool:
         return self.APP_ENV == "production"
 

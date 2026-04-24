@@ -11,15 +11,24 @@ Guiding Principles:
 1. **Normalization**: Standardize job titles (e.g., "Sr. SWE" to "Senior Software Engineer") and ensure dates are consistently formatted (YYYY-MM).
 2. **Experience Calculation**: 
    - Calculate 'total_experience_years' by summing up the durations of all non-overlapping work experiences.
-   - For each role, calculate 'duration_months' based on the start and end dates.
+   - For each role, calculate 'duration_months' if possible, or just extract start/end dates.
 3. **Skill Categorization**: 
-   - 'technical': Focus on hard skills like algorithms, system design, or specific methodologies.
-   - 'tools_and_platforms': Focus on infrastructure, cloud, and software (AWS, Docker, Jira).
-   - 'languages': Focus on programming and scripting languages.
-4. **Accuracy**: 
+   - Extract skills into a list of objects.
+   - Each object MUST have: 'category_name' (e.g., "Languages", "Frameworks") and 'skills' (a list of specific skill strings).
+   - Be exhaustive. If a skill is mentioned, categorize it.
+4. **Accuracy & Detail**: 
    - Do not hallucinate. If a field is not in the text, leave it null/empty.
-   - For 'responsibilities', extract concise, high-impact bullet points.
-5. **Entity Resolution**: Map education degrees to standard field names.
+   - For 'work_experience', ALWAYS extract 'responsibilities' as a list of clear bullet points.
+   - For 'education', extract ALL mentioned degrees into a list of objects (institution, degree, graduation_year).
+
+5. **Entity Resolution**: Map education degrees to standard professional field names.
+
+Important rules:
+- Extract ALL skills mentioned anywhere — in sentences, bullet points, or lists.
+- If work experience or projects are described in paragraph form, convert them to the structured format.
+- Follow the schema strictly. Ensure all list fields (skills, work_experience, education) are returned as lists of objects, even if there is only one entry.
+- total_experience_years: calculate as a float based on work_experience dates.
+- Return every field. Be thorough and precise.
 """
 
 RESUME_EXTRACTION_PROMPT = ChatPromptTemplate.from_messages([

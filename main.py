@@ -1,12 +1,12 @@
-from __future__ import annotations  
-
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import logging
+import sys
+import asyncio
+
+if sys.platform == "win32": 
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  
+
 from contextlib import asynccontextmanager # lifespan application
-from typing import AsyncGenerator  
+from typing import AsyncGenerator, Any
 
 import uvicorn
 from fastapi import FastAPI
@@ -15,17 +15,30 @@ from sqlalchemy import text
 from app.routes.job_description import router as jd_router
 from app.routes.resume import router as resume_router
 from app.routes.interview import router as interview_router
+from app.routes.auth import router as auth_router
+from app.routes.evaluation import router as evaluation_router
+from app.routes.documents import router as documents_router  
+from fastapi.staticfiles import StaticFiles #serving static files like html,css,js to be displayed on browser
+import os
 
+from app.services.postgres_db import create_tables, engine
+from app.graph.workflow import init_graph
+from app.utils.settings import settings
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from psycopg_pool import AsyncConnectionPool
 
-from services.postgres_db import create_tables, engine 
-from utils.settings import settings  
+#logger  
 
-# Logger  
+from logging.handlers import RotatingFileHandler
+
+file_handler = RotatingFileHandler(   #PRINTING THE ERROR MESSAGES IN DEBUG_APP.LOG FILE
+    'debug_app.log', maxBytes=50_000_000, backupCount=3
+)
+file_handler.setFormatter(logging.Formatter("%(asctime)s  %(levelname)-8s  %(name)s — %(message)s"))
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s  %(levelname)-8s  %(name)s — %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[file_handler, logging.StreamHandler()]
 )
 log = logging.getLogger("voicehire.main")
 
@@ -38,27 +51,32 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     Everything BEFORE yield  → runs on startup
     Everything AFTER  yield  → runs on shutdown
-
-    Replaces the deprecated @app.on_event("startup") pattern.
     """
     # STARTUP
     log.info(" VoiceHire API starting up...")
     log.info(f" Environment : {settings.APP_ENV}")
     log.info(f" DB host : {_safe_db_host(settings.DATABASE_URL)}")
 
-    # 1 verify DB connection before attempting table creation
     try:
-        async with engine.connect() as conn:
+        async with engine.connect() as conn:   #database connection checking and runs a SELECT 1 query
             await conn.execute(text("SELECT 1"))
         log.info("PostgreSQL connection verified")
     except Exception as e:
-        log.error(f"PostgreSQL connection FAILED: {e}")
-        log.error("Check DATABASE_URL in your .env file")
-        raise   # abort startup — no point running without a DB
+        log.error(f"DB connection FAILED: {e}")
+        raise
+    # .env check
+    if settings.STT_PROVIDER == "api" and not settings.OPENAI_API_KEY:  #checking the openai provider has required credentials
+        log.warning(
+            "STT_PROVIDER='api' requires OPENAI_API_KEY — it is not set. "
+            "Spoken answers will fall back to empty text and score 0."
+        )
+    elif settings.STT_PROVIDER == "azure" and not settings.AZURE_SPEECH_KEY:  #checking the stt azure provider has required credentials
+        log.warning(
+            "STT_PROVIDER='azure' requires AZURE_SPEECH_KEY — it is not set. "
+            "Spoken answers will fall back to empty text and score 0."
+        )
 
-    # 2  create tables if they don't exist
-    # Uses CREATE TABLE IF NOT EXISTS internally — safe on every restart.
-    # Existing tables and their data are never modified.
+    #creating tables if not exist from entities.py
     try:
         await create_tables()
         log.info("Tables verified / created:")
@@ -71,16 +89,51 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         log.error(f"Table creation FAILED: {e}")
         raise
 
-    log.info(f"  VoiceHire API ready on http://{settings.APP_HOST}:{settings.APP_PORT}")
+    #langgraph initialization with postgres checkpointer
+    #creates checkpoint tables and compiles the interview graph.
+    try:
+        conn_string = (
+            settings.DATABASE_URL
+            .replace("postgresql+asyncpg://", "postgresql://")
+            .replace("postgresql+psycopg2://", "postgresql://")
+            .replace("ssl=require", "sslmode=require")
+        )
+        
+        #use explicit pool with health checks and shorter idle timeouts for Azure stability
+        pool_kwargs = {
+            "max_size": 40,  #max 40 db connections
+            "min_size": 1,   #min 1 db connection
+            "max_idle": 30,  #rotate idle connections every 30s
+            "num_workers": 1, #opening closing etc
+            "check": AsyncConnectionPool.check_connection, #verifying connection(runs SELECT 1)
+        }
+        
+        async with AsyncConnectionPool(conn_string, **pool_kwargs) as pool:
+            log.info("Lifespan: AsyncConnectionPool context manager entered")
+            checkpointer = AsyncPostgresSaver(pool)
+            await checkpointer.setup()
+            log.info("Lifespan: Checkpointer setup complete")
+            
+            # Compile and store in app state for reliable access across routes
+            try:
+                graph = await init_graph(checkpointer)
+                setattr(app.state, "interview_graph", graph)
+                log.info("Lifespan: interview_graph successfully stored in app.state")
+            except Exception as e:
+                log.error(f"Lifespan: Failed to initialize or store graph: {e}")
+                raise
+            
+            log.info(f"Lifespan: VoiceHire API ready on http://{settings.APP_HOST}:{settings.APP_PORT}")
+            yield   # application remains inside this pool context. Stops the lifespan function
 
-    yield   # ← application runs here, handling requests
+    except Exception as e:
+        log.error(f"LangGraph graph init FAILED: {e}")
+        raise
 
     # SHUTDOWN
     log.info("VoiceHire API shutting down...")
-    await engine.dispose()
-    # dispose() waits for active connections to finish, then closes
-    # all pooled connections cleanly — no dangling connections on Azure.
-    log.info("Database engine disposed. Goodbye.")
+    await engine.dispose()        #waits for active connections to finish, then closes
+    log.info("System is gone! Nothing's left to care about here!!!")
 
 # App
 app = FastAPI(
@@ -93,64 +146,48 @@ app = FastAPI(
 )
 
 # Middleware  #
-ALLOWED_ORIGINS_DEV = [   
-    "http://localhost:3000",   
-    "http://localhost:8501",    
-    "http://127.0.0.1:8501",
+ALLOWED_ORIGINS_DEV = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",   # local frontend urls (Vite/React/Next)
+    "http://localhost:5500",   # VS Code Live Server
+    "http://127.0.0.1:5500",
 ]
 
 ALLOWED_ORIGINS_PROD = [
     "https://yourdomain.com",  # replace before deploying # this is for the frontend to connect to the backend
 ]
-
-app.add_middleware(
+#middleware to prevent CORS error when connecting to backend
+app.add_middleware(  # controls which frontend access the backend
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS_DEV if settings.is_development else ALLOWED_ORIGINS_PROD,   # this is for the frontend to connect to the backend
-    allow_credentials=True,   # this is for the frontend to send cookies to the backend
-    allow_methods=["GET", "POST", "PUT", "DELETE"],   # this is for the frontend to send requests to the backend
-    allow_headers=["Authorization", "Content-Type"],   # send headers to the backend
+    allow_origins=ALLOWED_ORIGINS_DEV if settings.is_development else ALLOWED_ORIGINS_PROD, #connects frontend and backend running on different ports
+    allow_credentials=True,   #frontend send credentials to the backend and vise versa
+    allow_methods=["GET", "POST", "PUT", "DELETE"],   
+    allow_headers=["Authorization", "Content-Type"],   #send metadata to the backend
 )
 
+app.include_router(auth_router, prefix="/api") 
+app.include_router(documents_router, prefix="/api")
+app.include_router(evaluation_router, prefix="/api/interview", tags=["Evaluation"])
 app.include_router(interview_router, prefix="/api/interview", tags=["Interview"])
-# app.include_router(candidate_router, prefix="/api/candidate", tags=["Candidate"])
-# app.include_router(files_router,     prefix="/api/files",     tags=["Files"])
-
-app.include_router(jd_router)
-app.include_router(resume_router)
+app.include_router(jd_router, prefix="/api")
+app.include_router(resume_router, prefix="/api")
 
 
-# @app.get("/status", tags=["Status"])
-# async def health_check() -> dict:
-#     """
-#     Lightweight health check endpoint.
-#     Used by Azure App Service / load balancer to verify the app is alive.
-#     Does NOT hit the database — for DB health use /health/db.
-#     """
-#     return {
-#         "status": "ok",
-#         "environment": settings.APP_ENV,
-#         "version": "1.0.0",
-#     }
+@app.get("/health", tags=["System"], include_in_schema=True)  #cloud will ping the endpoint to check if the server is running
+async def health_check():
+    """Liveness probe — confirms the API process is running."""
+    return {"status": "ok", "env": settings.APP_ENV}
 
 
-# @app.get("/status/db", tags=["Status"])
-# async def db_health_check() -> dict:
-#     """
-#     Database connectivity check.
-#     Runs a lightweight SELECT 1 against PostgreSQL.
-#     """
-#     try:
-#         async with engine.connect() as conn:
-#             await conn.execute(text("SELECT 1"))
-#         return {"status": "ok", "database": "connected"}
-#     except Exception as e:
-#         return {"status": "error", "database": str(e)}
+# Serve frontend at /ui  (must be mounted AFTER all API routes)
+if os.path.isdir("frontend"):  #hosting frontend at /ui
+    app.mount("/ui", StaticFiles(directory="frontend", html=True), name="frontend")
+    log.info("Frontend served at /ui (http://%s:%s/ui/)", settings.APP_HOST, settings.APP_PORT)
 
-def _safe_db_host(db_url: str) -> str:
+def _safe_db_host(db_url: str) -> str:  #extract just the host from DATABASE_URL for safe logging
     """
-    Extract just the host from DATABASE_URL for safe logging.
     Strips credentials so they never appear in logs.
-
+    Secures the db url by removing the credentials
     postgresql+asyncpg://user:pass@hostname:5432/db  →  hostname:5432/db
     """
     try:
@@ -159,13 +196,22 @@ def _safe_db_host(db_url: str) -> str:
         return "unknown"
 
 if __name__ == "__main__":
-
-    uvicorn.run(
-        "main:app", 
-        host="127.0.0.1",
-        port=8000,
-        reload=True 
+    import selectors
+    
+    if sys.platform == "win32":
+        loop = asyncio.SelectorEventLoop(selectors.SelectSelector())
+        asyncio.set_event_loop(loop)
+    
+    config = uvicorn.Config(
+        app, 
+        host=settings.APP_HOST, 
+        port=settings.APP_PORT, 
+        loop="asyncio",
+        log_level="info"
     )
-
-
-    #  0;c;1;P;c;5;o;1;f;0;0l;3;0v;3;0g;1;0o;0;0a;1;0f;0;1b;0
+    server = uvicorn.Server(config)
+    
+    if sys.platform == "win32":
+        loop.run_until_complete(server.serve())
+    else:
+        asyncio.run(server.serve())

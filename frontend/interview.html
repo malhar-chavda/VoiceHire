@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VoiceHire — Interview Room</title>
+  <meta name="description" content="Your AI-powered voice interview session. Camera and microphone required." />
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <!-- Azure Cognitive Services Speech SDK -->
+  <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
+
+  <style>
+    body { overflow: hidden; }
+
+    /* Full-screen layout for the interview */
+    .interview-layout {
+      position: relative;
+      width: 100vw; height: 100vh;
+    }
+
+    /* Permission view fills screen */
+    #view-permission {
+      position: absolute; inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 1.5rem;
+      background: var(--bg);
+      z-index: 20;
+    }
+    #view-permission.active { display: flex; }
+
+
+    /* Room view */
+    #view-room {
+      position: absolute; inset: 0;
+      display: none; flex-direction: column;
+      z-index: 10;
+    }
+    #view-room.active { display: flex; }
+
+    /* Completion view */
+    #view-complete {
+      position: absolute; inset: 0;
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: var(--bg);
+      z-index: 30;
+    }
+    #view-complete.active { display: flex; }
+  </style>
+</head>
+<body>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div id="toast-area"></div>
+
+  <div class="interview-layout">
+
+    <!-- ══ VIEW: Permission / Welcome ══════════════════════════════ -->
+    <div id="view-permission">
+      <div class="permission-card glass-card fade-in">
+        <div class="permission-icon">🎤</div>
+        <h2>Ready for your interview?</h2>
+        <p>
+          This session requires <strong>camera</strong> and <strong>microphone</strong> access.
+          Your microphone stays on throughout the interview — speak naturally after each question plays.
+        </p>
+
+        <div style="margin:1.5rem 0;display:flex;flex-direction:column;gap:0.6rem;text-align:left;">
+          <div style="display:flex;gap:0.75rem;align-items:flex-start;font-size:0.85rem;color:var(--muted);">
+            <span>🎥</span><span>Camera is displayed locally only — not recorded or sent to the server.</span>
+          </div>
+          <div style="display:flex;gap:0.75rem;align-items:flex-start;font-size:0.85rem;color:var(--muted);">
+            <span>🎙️</span><span>Microphone stays on. Your speech is transcribed and evaluated seamlessly when you stop talking.</span>
+          </div>
+          <div style="display:flex;gap:0.75rem;align-items:flex-start;font-size:0.85rem;color:var(--muted);">
+            <span>🔊</span><span>Make sure your speakers/headphones are on — questions will be read aloud.</span>
+          </div>
+        </div>
+
+        <p id="perm-error" style="color:var(--error);font-size:0.82rem;min-height:1.1rem;margin-bottom:0.75rem;"></p>
+
+        <button id="start-btn" class="btn btn-primary btn-full btn-lg">
+          Start Interview
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ VIEW: Interview Room ════════════════════════════════════ -->
+    <div id="view-room">
+
+      <!-- Header -->
+      <header class="room-header">
+        <div class="room-brand">⚡ VoiceHire</div>
+
+        <div class="room-progress">
+          <span class="q-counter" id="q-counter">Loading…</span>
+          <div class="progress-bar" style="width:200px;">
+            <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+          </div>
+        </div>
+
+        <div class="room-status">
+          <div class="sdot" id="sdot"></div>
+          <span id="status-text">Initialising…</span>
+        </div>
+      </header>
+
+      <!-- Body: Question | Camera+Transcript -->
+      <div class="room-body">
+
+        <!-- Left: question display -->
+        <div class="question-panel">
+          <div class="q-tag" id="q-tag">Question 1</div>
+
+          <div class="question-text" id="question-text">
+            <div class="loading-wrap">
+              <div class="spinner"></div>
+              <span>Loading your first question…</span>
+            </div>
+          </div>
+
+          <!-- Score feedback for previous answer -->
+          <div id="score-feedback" class="score-feedback" hidden>
+            <div class="score-pill">—</div>
+            <span class="score-msg">—</span>
+          </div>
+        </div>
+
+        <!-- Right: camera + transcript -->
+        <aside class="right-panel">
+
+          <!-- Camera -->
+          <div class="camera-wrap" id="camera-wrap">
+            <video id="camera-feed" autoplay muted playsinline></video>
+            <!-- Shown when camera is unavailable -->
+            <div id="camera-placeholder" style="display:none;align-items:center;justify-content:center;width:100%;height:100%;flex-direction:column;gap:0.5rem;color:var(--muted);font-size:0.85rem;">
+              <span style="font-size:2rem;">🎙️</span>
+              <span>Audio only</span>
+            </div>
+            <div class="cam-overlay">
+              <div class="rec-dot" id="rec-dot"></div>
+              <span class="cam-label">LIVE</span>
+            </div>
+          </div>
+
+          <!-- Transcript -->
+          <div class="transcript-label">Your answer</div>
+          <div class="transcript-box" id="transcript">
+            <em class="transcript-empty">Your speech will appear here…</em>
+          </div>
+
+        </aside>
+      </div>
+
+      <!-- Footer: waveform -->
+      <footer class="room-footer">
+        <div class="waveform-wrap">
+          <canvas id="waveform-canvas"></canvas>
+        </div>
+      </footer>
+
+    </div>
+
+    <!-- ══ VIEW: Completion ════════════════════════════════════════ -->
+    <div id="view-complete">
+      <div class="complete-card glass-card fade-in">
+        <div class="complete-icon" id="c-icon">🎉</div>
+        <h2>Interview Complete!</h2>
+        <p class="subtext">Thank you for your time. Here's how you did:</p>
+
+        <div class="complete-stats">
+          <div class="stat-box">
+            <div class="stat-num" id="c-score">—</div>
+            <div class="stat-lbl">Final Score</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="c-rec" style="font-size:1.2rem;">—</div>
+            <div class="stat-lbl">Recommendation</div>
+          </div>
+        </div>
+
+        <p id="c-summary" style="color:var(--muted);font-size:0.88rem;line-height:1.7;text-align:left;padding:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);"></p>
+
+        <p style="color:var(--muted);font-size:0.8rem;margin-top:1.5rem;">
+          You'll receive an email shortly with your results. You can close this window.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Hidden audio element for TTS playback -->
+  <audio id="tts-audio" style="display:none;" preload="none"></audio>
+
+  <script type="module" src="js/interview.js"></script>
+</body>
+</html>

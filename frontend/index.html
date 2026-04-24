@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VoiceHire — Recruiter Portal</title>
+  <meta name="description" content="VoiceHire recruiter dashboard — upload resumes, evaluate candidates, and launch AI-powered voice interviews." />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- Background orbs -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="bg-orb bg-orb-3"></div>
+
+  <div id="toast-area"></div>
+
+  <main class="recruiter-layout">
+    <div class="recruiter-container glass-card">
+
+      <!-- Brand -->
+      <div class="brand">
+        <div class="brand-logo">⚡ VoiceHire</div>
+        <div class="brand-tagline">AI-Powered Voice Interview Platform</div>
+      </div>
+
+      <!-- Step dots -->
+      <div class="steps">
+        <div class="step active" title="Login"></div>
+        <div class="step" title="Upload"></div>
+        <div class="step" title="Review"></div>
+        <div class="step" title="Result"></div>
+      </div>
+
+      <!-- ── Screen 0: Login ──────────────────────────────────── -->
+      <section class="screen active" id="screen-0">
+        <h2 style="font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;">Recruiter Login</h2>
+        <p style="color:var(--muted);font-size:0.875rem;margin-bottom:1.75rem;">Access the hiring dashboard</p>
+
+        <form id="login-form" novalidate>
+          <div class="form-group">
+            <label for="f-username">Username</label>
+            <input id="f-username" name="username" type="text" placeholder="admin" required autocomplete="username" />
+          </div>
+          <div class="form-group">
+            <label for="f-password">Password</label>
+            <input id="f-password" name="password" type="password" placeholder="••••••••" required autocomplete="current-password" />
+          </div>
+          <p id="login-error" style="color:var(--error);font-size:0.85rem;min-height:1.2rem;margin-bottom:0.75rem;"></p>
+          <button type="submit" id="login-btn" class="btn btn-primary btn-full btn-lg">Sign In →</button>
+        </form>
+      </section>
+
+      <!-- ── Screen 1: Upload ─────────────────────────────────── -->
+      <section class="screen" id="screen-1">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+          <div>
+            <h2 style="font-size:1.2rem;font-weight:700;">Upload Documents</h2>
+            <p style="color:var(--muted);font-size:0.8rem;margin-top:0.15rem;">PDF files only</p>
+          </div>
+          <div style="display:flex;gap:0.5rem;">
+            <a href="dashboard.html" class="btn btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.9rem;">📊 Dashboard</a>
+            <button id="logout-btn" class="btn btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.9rem;">Logout</button>
+          </div>
+        </div>
+
+        <div class="upload-grid">
+          <!-- Resume drop zone -->
+          <div class="drag-zone" id="resume-drop">
+            <input type="file" id="resume-input" accept=".pdf" />
+            <span class="drag-icon">📄</span>
+            <div class="drag-label">Resume PDF</div>
+            <div class="drag-sub">Drag & drop or click to browse</div>
+            <div class="drag-filename"></div>
+          </div>
+          <!-- JD drop zone -->
+          <div class="drag-zone" id="jd-drop">
+            <input type="file" id="jd-input" accept=".pdf" />
+            <span class="drag-icon">📋</span>
+            <div class="drag-label">Job Description PDF</div>
+            <div class="drag-sub">Drag & drop or click to browse</div>
+            <div class="drag-filename"></div>
+          </div>
+        </div>
+
+        <button id="upload-btn" class="btn btn-primary btn-full btn-lg" disabled>
+          Upload &amp; Analyze →
+        </button>
+      </section>
+
+      <!-- ── Screen 2: Review & Evaluate ─────────────────────── -->
+      <section class="screen" id="screen-2">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;">
+          <button id="back-to-upload" class="btn btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.8rem;">← Back</button>
+          <div>
+            <h2 style="font-size:1.2rem;font-weight:700;">Review & Evaluate</h2>
+            <p style="color:var(--muted);font-size:0.8rem;margin-top:0.1rem;">Confirm details then run the AI match</p>
+          </div>
+        </div>
+
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.25rem;">
+          <div class="result-row">
+            <span class="result-label">Candidate name</span>
+            <span class="result-value" id="info-name">—</span>
+          </div>
+          <div class="result-row" style="border-top:1px solid var(--border);">
+            <span class="result-label">Candidate email</span>
+            <span class="result-value" id="info-email" style="font-size:0.85rem;">—</span>
+          </div>
+          <div class="result-row" style="border-top:1px solid var(--border);">
+            <span class="result-label">Job title</span>
+            <span class="result-value" id="info-title">—</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:1.25rem;">
+          <label for="num-questions">Number of interview questions</label>
+          <select id="num-questions">
+            <option value="2">2 — Quick test</option>
+            <option value="4">4 — Short</option>
+            <option value="6">6 — Standard</option>
+            <option value="8" selected>8 — Full interview</option>
+            <option value="10">10 — Comprehensive</option>
+          </select>
+        </div>
+
+        <button id="evaluate-btn" class="btn btn-primary btn-full btn-lg">
+          Evaluate Match →
+        </button>
+      </section>
+
+      <!-- ── Screen 3: Result ─────────────────────────────────── -->
+      <section class="screen" id="screen-3">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;">
+          <button id="back-to-review" class="btn btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.8rem;">← Back</button>
+          <div>
+            <h2 style="font-size:1.2rem;font-weight:700;">Evaluation Result</h2>
+          </div>
+        </div>
+
+        <div class="score-section">
+          <div class="score-ring-wrap">
+            <svg class="score-ring-svg" viewBox="0 0 120 120">
+              <defs>
+                <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%"   stop-color="#94a187" />
+                  <stop offset="100%" stop-color="#d6d3d1" />
+                </linearGradient>
+              </defs>
+              <circle class="score-ring-bg"   cx="60" cy="60" r="54" />
+              <circle class="score-ring-fill" cx="60" cy="60" r="54" id="score-ring-fill"
+                      stroke-dasharray="339.3" stroke-dashoffset="339.3" />
+            </svg>
+            <div class="score-ring-text">
+              <div class="score-num" id="score-num">0</div>
+              <div class="score-label">/ 100</div>
+            </div>
+          </div>
+
+          <div id="eligibility-badge" class="badge badge-primary">Evaluating…</div>
+          <p id="result-reason" style="color:var(--muted);font-size:0.82rem;text-align:center;max-width:340px;line-height:1.6;"></p>
+        </div>
+
+        <div class="divider"></div>
+
+        <button class="btn btn-primary btn-full" onclick="location.reload()">
+          Evaluate Another Candidate
+        </button>
+      </section>
+
+    </div>
+  </main>
+
+  <script type="module" src="js/recruiter.js"></script>
+</body>
+</html>

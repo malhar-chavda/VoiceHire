@@ -49,7 +49,7 @@ VoiceHire is an automated AI-driven candidate evaluation pipeline. It intakes jo
 To start the FastAPI server locally:
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn main:app --host 0.0.0.0 --port 8006 --reload
 ```
 
 The API will be available at `http://127.0.0.1:8000`. You can explore the Swagger documentation at `http://127.0.0.1:8000/docs`.
