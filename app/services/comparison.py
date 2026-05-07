@@ -1,12 +1,11 @@
-from __future__ import annotations
-
+﻿from __future__ import annotations
 import json
 import logging
 from typing import Any
 
-from app.services.azure_openai import azure_openai
-from app.prompts.matching import COMPARISON_PROMPT
-from app.models.comparison_model import ComparisonSchema
+from app.services.azure.azure_openai import azure_openai
+from app.utils.helpers.prompts import COMPARISON_PROMPT
+from app.models.interview_model import ComparisonSchema
 
 logger = logging.getLogger(__name__)
 
@@ -35,3 +34,5 @@ class MatchingService:
             raise
         
 matching_service = MatchingService()
+
+

@@ -264,15 +264,21 @@ function renderStats() {
   }
 
   tbody.innerHTML = recent.map(i => {
-    const isCompleted = safeStr(i.status).toLowerCase() === 'completed'
-    const reportBtn = isCompleted
-      ? `<button class="btn btn-sm btn-secondary view-report-btn" data-id="${i.interview_id}" style="white-space:nowrap">📊 Report</button>`
+    const s = safeStr(i.status).toLowerCase()
+    const isDone = ['completed', 'hire', 'hold'].includes(s)
+    const reportBtn = isDone
+      ? `<button class="btn btn-sm btn-primary view-report-btn" data-id="${i.interview_id}" style="white-space:nowrap">📋 Full Report</button>`
       : `<span class="muted-text" style="font-size:0.8rem">—</span>`
     return `<tr>
       <td><strong>${esc(i.candidate_name)}</strong><div class="sub-text">${esc(i.candidate_email)}</div></td>
       <td>${esc(i.jd_title)}</td>
       <td>${statusBadge(i.status)}</td>
-      <td>${i.match_score != null ? `<span class="score-text">${Number(i.match_score).toFixed(1)}%</span>` : '—'}</td>
+      <td>
+        ${i.match_score != null ? `<span class="score-text">${Number(i.match_score).toFixed(1)}%</span>` : '—'}
+        <div class="sub-text" style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${esc(i.overall_summary || '')}">
+          ${esc(i.overall_summary || 'No summary available')}
+        </div>
+      </td>
       <td class="muted-text">${fmtTime(i.created_at)}</td>
       <td>${reportBtn}</td>
     </tr>`
@@ -392,9 +398,10 @@ function renderInterviews(search = '') {
         ? '📭 No interviews found. Evaluate a candidate to get started.'
         : '🔍 No interviews match this filter.')
     : rows.map(i => {
-      const isCompleted = safeStr(i.status).toLowerCase() === 'completed'
-      const reportBtn = isCompleted
-        ? `<button class="btn btn-sm btn-secondary view-report-btn" data-id="${i.interview_id}" style="white-space:nowrap">📊 View Report</button>`
+      const s = safeStr(i.status).toLowerCase()
+      const isDone = ['completed', 'hire', 'hold'].includes(s)
+      const reportBtn = isDone
+        ? `<button class="btn btn-sm btn-primary view-report-btn" data-id="${i.interview_id}" style="white-space:nowrap">📋 View Report</button>`
         : `<span class="muted-text" style="font-size:0.8rem">—</span>`
       return `<tr>
         <td>
@@ -409,6 +416,11 @@ function renderInterviews(search = '') {
         <td>${esc(i.jd_title)}</td>
         <td>${statusBadge(i.status)}</td>
         <td>${i.match_score != null ? `<span class="score-text">${Number(i.match_score).toFixed(1)}%</span>` : '—'}</td>
+        <td style="max-width:250px;">
+          <div style="font-size:0.8rem; color:var(--muted); display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="${esc(i.overall_summary || '')}">
+            ${esc(i.overall_summary || 'Analysis pending...')}
+          </div>
+        </td>
         <td>${i.final_score != null ? scoreBar(i.final_score) : '—'}</td>
         <td>${recBadge(i.recommendation)}</td>
         <td class="muted-text">${fmt(i.created_at)}</td>
@@ -440,7 +452,7 @@ $('iv-search').addEventListener('input', debounce(e => renderInterviews(e.target
 
 //  Reports 
 function renderReports() {
-  const completed = interviews.filter(i => safeStr(i.status) === 'completed')
+  const completed = interviews.filter(i => ['completed', 'hire', 'hold'].includes(safeStr(i.status).toLowerCase()))
   const grid = $('reports-grid')
   if (!grid) return
 

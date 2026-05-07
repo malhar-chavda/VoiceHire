@@ -9,7 +9,7 @@ from app.structure.entities import Interview, InterviewStatus, Answer
 from app.models.interview_model import EvaluateRequest, EvaluateResponse
 from app.services.comparison import matching_service
 from app.services.question_generation import question_service
-from app.services.azure_email import azure_email
+from app.services.azure.azure_email import azure_email
 from app.utils.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,7 @@ async def evaluate_match(
             candidate_name=resume_obj.candidate_name,
             is_eligible=existing_iv.eligibility,
             session_token=existing_iv.session_token if existing_iv.eligibility else None,
+            interview_id=existing_iv.id if existing_iv.eligibility else None,
         )
 
         return EvaluateResponse(
@@ -60,7 +61,6 @@ async def evaluate_match(
             interview_id=existing_iv.id,
             session_token=existing_iv.session_token,
         )
-
 
 
     try:
@@ -105,12 +105,12 @@ async def evaluate_match(
             )
             logger.info(f"Successfully generated {len(generated_questions)} questions.")
 
-            # ── Q1: Default greeting + self-introduction (always first) ──────
+            # â”€â”€ Q1: Default greeting + self-introduction (always first) â”€â”€â”€â”€â”€â”€
             greeting_text = (
                 f"Hello! Welcome to your VoiceHire interview. "
                 f"I'm your interviewer today. "
                 f"Before we dive into the technical questions, "
-                f"could you please start by introducing yourself — "
+                f"could you please start by introducing yourself  "
                 f"your background, experience, and what interests you about this role?"
             )
             db.add(Answer(
@@ -121,7 +121,7 @@ async def evaluate_match(
                 answer_text="",
             ))
 
-            # ── Q2+: LLM-generated domain-specific questions ─────────────────
+            # â”€â”€ Q2+: LLM-generated domain-specific questions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             for idx, q in enumerate(generated_questions, start=2):
                 db.add(Answer(
                     interview_id=interview.id,
@@ -145,6 +145,7 @@ async def evaluate_match(
         candidate_name=resume_obj.candidate_name,
         is_eligible=eligibility,
         session_token=interview.session_token if eligibility else None,
+        interview_id=interview.id if eligibility else None,
     )
 
     logger.info(f"<<< [EVALUATE COMPLETE] Eligible: {eligibility} | Match: {match_score}")
@@ -157,3 +158,4 @@ async def evaluate_match(
             session_token=interview.session_token,
         )
     return EvaluateResponse(eligibility=False, match_score=match_score, reason=reasoning)
+

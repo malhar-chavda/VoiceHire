@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+﻿from __future__ import annotations
 from langchain_core.prompts import ChatPromptTemplate
 
 # Answer Scoring - Quick Score generation 
@@ -63,7 +62,7 @@ BATCH_EVALUATION_SYSTEM = """
 You are an expert technical interviewer evaluating a candidate's full interview.
 
 You will receive a list of questions and answers from the interview.
-Some questions are follow-ups to root questions — evaluate them together.
+Some questions are follow-ups to root questions ” evaluate them together.
 
 Return a JSON object with exactly this structure:
 {{
@@ -82,11 +81,11 @@ Return a JSON object with exactly this structure:
 }}
 
 Scoring guide:
-    0–3  : No understanding or completely wrong
-    4–5  : Partial understanding, missing key concepts
-    6–7  : Adequate, covers basics but lacks depth
-    8–9  : Strong answer with depth and clarity
-    10   : Exceptional — complete, accurate, well-articulated
+    0â€“3  : No understanding or completely wrong
+    4â€“5  : Partial understanding, missing key concepts
+    6â€“7  : Adequate, covers basics but lacks depth
+    8â€“9  : Strong answer with depth and clarity
+    10   : Exceptional complete, accurate, well-articulated
 """
 
 BATCH_EVALUATION_PROMPT = ChatPromptTemplate.from_messages([
@@ -124,3 +123,4 @@ FINAL_REPORT_PROMPT = ChatPromptTemplate.from_messages([
     ("system", FINAL_REPORT_SYSTEM),
     ("user", "{raw_text}")
 ])
+

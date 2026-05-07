@@ -1,8 +1,9 @@
+﻿from __future__ import annotations
 """
 document processing service (parse, upload, extract)
 orchestrates the flow (upload, llm call, db save)
 """
-from __future__ import annotations
+
 
 import asyncio
 import logging
@@ -10,9 +11,9 @@ from typing import Type, TypeVar, Any
 from fastapi import UploadFile, HTTPException
 from pydantic import BaseModel
 
-from app.services.azure_blob import blob_storage
-from app.services.azure_openai import azure_openai
-from app.utils.pdf_parser import pdf_parser
+from app.services.azure.azure_blob import blob_storage
+from app.services.azure.azure_openai import azure_openai
+from app.utils.helpers.parsers import pdf_parser
 
 logger = logging.getLogger(__name__)
 
@@ -86,3 +87,5 @@ class DocumentService:
         return extracted_data, blob_url
 
 document_service = DocumentService()
+
+

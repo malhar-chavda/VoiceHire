@@ -1,3 +1,4 @@
+﻿from __future__ import annotations
 """
 Authentication system for a single recruiter user.
 1. Login endpoint verifies the recruiter password and issues a JWT access token.
@@ -6,11 +7,11 @@ Authentication system for a single recruiter user.
    - validates the JWT,
    - checks that the subject matches the configured recruiter username.
 
-JWT tokens are signed using the app’s SECRET_KEY and include an expiry time.
+JWT tokens are signed using the appâ€™s SECRET_KEY and include an expiry time.
 An additional "interview token" is supported, which encodes an interview_id
 and is used for candidate interview links (valid for 24 hours).
 """
-from __future__ import annotations
+
 
 import logging
 import uuid
@@ -92,7 +93,7 @@ class AuthManager:
             data={
                 "sub":  interview_id,
                 "type": "interview",
-                "jti":  str(uuid.uuid4()),   # unique per issuance — prevents identical tokens
+                "jti":  str(uuid.uuid4()),   # unique per issuance prevents identical tokens
             },
             expires_delta=timedelta(days=7)
         )
@@ -130,3 +131,5 @@ class AuthManager:
         return username
 
 auth_manager = AuthManager()  #startup
+
+

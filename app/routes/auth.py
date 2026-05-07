@@ -1,7 +1,8 @@
+﻿from __future__ import annotations
 """
 handles the login of the recruiter.
 """
-from __future__ import annotations
+
 
 import logging
 from fastapi import APIRouter, HTTPException, Depends, status
@@ -55,3 +56,5 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):  #provides us
         "token_type": "bearer",
         "username": form_data.username
     }
+
+

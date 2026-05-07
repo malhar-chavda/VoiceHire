@@ -1,6 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-/* ── Reset & Base ─────────────────────────────────────────────── */
+/* â”€â”€ Reset & Base â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -33,7 +33,7 @@ body {
   line-height: 1.6;
 }
 
-/* ── Animated background orbs ────────────────────────────────── */
+/* â”€â”€ Animated background orbs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .bg-orb {
   position: fixed;
   border-radius: 50%;
@@ -62,7 +62,7 @@ body {
   opacity: 0.1;
 }
 
-/* ── Glass card ──────────────────────────────────────────────── */
+/* â”€â”€ Glass card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .glass-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -74,7 +74,7 @@ body {
   z-index: 1;
 }
 
-/* ── Buttons ─────────────────────────────────────────────────── */
+/* â”€â”€ Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -220,7 +220,7 @@ select option { background: #1a1c1b; }
 .toast.error   { background: #7f1d1d; border: 1px solid #991b1b; color: #fca5a5; }
 .toast.info    { background: #1e1b4b; border: 1px solid #312e81; color: #a5b4fc; }
 
-/* ── Loading spinner ─────────────────────────────────────────── */
+/* â”€â”€ Loading spinner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .spinner {
   width: 40px; height: 40px;
   border: 3px solid rgba(255,255,255,0.1);
@@ -236,14 +236,14 @@ select option { background: #1a1c1b; }
   color: var(--muted); font-size: 0.9rem;
 }
 
-/* ── Divider ─────────────────────────────────────────────────── */
+/* â”€â”€ Divider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .divider {
   height: 1px;
   background: var(--border);
   margin: 1.5rem 0;
 }
 
-/* ── Step indicator ──────────────────────────────────────────── */
+/* â”€â”€ Step indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .steps {
   display: flex; gap: 0.5rem; align-items: center;
   justify-content: center; margin-bottom: 2rem;
@@ -252,9 +252,9 @@ select option { background: #1a1c1b; }
 .step.active { background: var(--primary); transform: scale(1.4); }
 .step.done { background: var(--success); }
 
-/* ══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════════
    RECRUITER PAGE
-══════════════════════════════════════════════════════════════ */
+══════════════════════════════════════════════════════════════ */
 .recruiter-layout {
   min-height: 100vh;
   display: flex; align-items: center; justify-content: center;
@@ -300,9 +300,9 @@ select option { background: #1a1c1b; }
 }
 .score-eligibility { font-size: 1.1rem; font-weight: 600; text-align: center; }
 
-/* ══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════════
    INTERVIEW PAGE
-══════════════════════════════════════════════════════════════ */
+══════════════════════════════════════════════════════════════ */
 .interview-layout {
   height: 100vh;
   display: flex; flex-direction: column;
@@ -480,7 +480,7 @@ select option { background: #1a1c1b; }
 #waveform-canvas { width: 100%; height: 100%; display: block; border-radius: 8px; }
 .footer-actions { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
 
-/* ── Completion view ──────────────────────────────────────────── */
+/* â”€â”€ Completion view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 #view-complete {
   align-items: center; justify-content: center;
   flex-direction: column;
@@ -506,7 +506,7 @@ select option { background: #1a1c1b; }
 .stat-num { font-size: 1.8rem; font-weight: 800; background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .stat-lbl { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 0.15rem; }
 
-/* ── Animations ──────────────────────────────────────────────── */
+/* â”€â”€ Animations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @keyframes float {
   0%, 100% { transform: translateY(0) scale(1); }
   50%       { transform: translateY(-35px) scale(1.06); }
@@ -528,3 +528,7 @@ select option { background: #1a1c1b; }
   0%, 100% { box-shadow: 0 0 30px rgba(218, 215, 205, 0.15); }
   50%       { box-shadow: 0 0 50px rgba(218, 215, 205, 0.3); }
 }
+
+/* ── Interview JS additions ─────────────────────────── */
+.toast.warn    { background: #451a03; border: 1px solid #78350f; color: #fcd34d; }
+.toast.success { background: #064e3b; border: 1px solid #065f46; color: #6ee7b7; }

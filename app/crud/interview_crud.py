@@ -1,4 +1,4 @@
-"""
+﻿"""
 data access layer, responsible for all the database operations.
 """
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +28,12 @@ async def get_active_interview_for_candidate(db: AsyncSession, resume_id: str, j
 
 async def get_interview(db: AsyncSession, interview_id: str):
     return await db.get(Interview, interview_id)
+
+async def update_session_resumption_token(db: AsyncSession, interview_id: str, token: str):
+    interview = await db.get(Interview, interview_id)
+    if interview:
+        interview.session_resumption_token = token
+        await db.commit()
 
 async def get_final_report(db: AsyncSession, interview_id: str):
     res = await db.execute(select(FinalReport).where(FinalReport.interview_id == interview_id))
@@ -97,3 +103,4 @@ async def get_interview_report_details(db: AsyncSession, interview_id: str):
         .where(Interview.id == interview_id)
     )
     return result.first()
+

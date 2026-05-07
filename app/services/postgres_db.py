@@ -1,15 +1,16 @@
+﻿from __future__ import annotations
 """
 Async SQLAlchemy engine + session factory for Voice_Hire.
 
 Provides
-    engine — AsyncEngine  (used by main.py lifespan to create tables)
-    AsyncSessionLocal — async_sessionmaker (used by nodes for DB writes)
-    get_db() — FastAPI dependency that yields an AsyncSession per request
+    engine AsyncEngine  (used by main.py lifespan to create tables)
+    AsyncSessionLocal async_sessionmaker (used by nodes for DB writes)
+    get_db() FastAPI dependency that yields an AsyncSession per request
 
 Why async
     FastAPI is async-native. Using a sync engine with async routes forces
     a thread-pool workaround. AsyncEngine + AsyncSession integrates cleanly
-    with FastAPI's event loop — no blocking, no thread overhead.
+    with FastAPI's event loop no blocking, no thread overhead.
 
 Usage in a node (LangGraph):
     from services.postgres_db import AsyncSessionLocal
@@ -18,7 +19,7 @@ Usage in a node (LangGraph):
         async with session.begin():
             session.add(some_model_instance)
 """
-from __future__ import annotations
+
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -93,3 +94,5 @@ async def create_tables() -> None:
 
     async with engine.begin() as conn: #using run_sync to create tables 
         await conn.run_sync(lambda sync_conn: Base.metadata.create_all(sync_conn, checkfirst=True))
+
+

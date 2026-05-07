@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+﻿from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,7 +7,7 @@ from sqlalchemy import select
 
 from app.services.postgres_db import get_db
 from app.structure.entities import JobDescription
-from app.models.jd_model import JDResponse
+from app.models.interview_model import JDResponse
 from app.services.auth import auth_manager
 
 logger = logging.getLogger(__name__)
@@ -47,3 +46,5 @@ async def list_jds(db: AsyncSession = Depends(get_db)) -> list[JDResponse]:
         )
         for row in rows
     ]
+
+

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 from langchain_core.prompts import ChatPromptTemplate
 
 # RESUME EXTRACTION
@@ -24,7 +24,7 @@ Guiding Principles:
 5. **Entity Resolution**: Map education degrees to standard professional field names.
 
 Important rules:
-- Extract ALL skills mentioned anywhere — in sentences, bullet points, or lists.
+- Extract ALL skills mentioned anywhere in sentences, bullet points, or lists.
 - If work experience or projects are described in paragraph form, convert them to the structured format.
 - Follow the schema strictly. Ensure all list fields (skills, work_experience, education) are returned as lists of objects, even if there is only one entry.
 - total_experience_years: calculate as a float based on work_experience dates.

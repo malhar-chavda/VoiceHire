@@ -161,3 +161,4 @@ Thumbs.db
 debug_app.log
 checkpoints.db
 scratch/
+.env_utf8

@@ -51,3 +51,4 @@ class PDFParser:
 # Singleton import this everywhere
 pdf_parser = PDFParser()
 
+

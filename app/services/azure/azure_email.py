@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 import logging
 from typing import Any
 from azure.communication.email.aio import EmailClient
@@ -26,12 +26,14 @@ class AzureEmailManager:
         
         # Invite
         if name == "invite":
-            url = f"{settings.FRONTEND_BASE_URL}/interview.html?token={kwargs.get('session_token')}"
+            interview_id = kwargs.get('interview_id')
+            token = kwargs.get('session_token')
+            url = f"{settings.FRONTEND_BASE_URL}/interview.html?token={token}&interview_id={interview_id}"
             return f'<html><body style="font-family: Arial;"><h2>Congrats, {candidate_name}!</h2><p>Click below to start your AI interview:</p><a href="{url}" style="background:#0078d4;color:white;padding:10px;text-decoration:none;border-radius:4px;">Start Interview</a></body></html>'
         
         # Decision
         templates = {
-            "hire":   (f"<h2>Great news, {candidate_name}!</h2><p>Your interview was exceptionalðŸ”¥ðŸ”¥. Our team will contact you shortly with an offer.</p>", "#28a745"),
+            "hire":   (f"<h2>Great news, {candidate_name}!</h2><p>Your interview was exceptional 🔥🔥. Our team will contact you shortly with an offer.</p>", "#28a745"),
             "reject": (f"<h2>Hi {candidate_name},</h2><p>Thank you for your time. We have decided not to move forward with your application at this stage. But all the best for the future!</p>", "#333"),
             "hold":   (f"<h2>Hi {candidate_name},</h2><p>Your interview is complete. We are still reviewing other candidates and will update you soon.</p>", "#ffc107")
         }
@@ -70,17 +72,17 @@ class AzureEmailManager:
             logger.error(f"Email failed: {e}")
             return False
 
-    async def send_decision_email(self, candidate_email: str, candidate_name: str, is_eligible: bool, session_token: str | None = None) -> bool:
-        if is_eligible and not session_token: return False
+    async def send_decision_email(self, candidate_email: str, candidate_name: str, is_eligible: bool, session_token: str | None = None, interview_id: str | None = None) -> bool:
+        if is_eligible and (not session_token or not interview_id): return False
         
         subject = "Invitation: Voice Interview" if is_eligible else "Application Update"
         template = "invite" if is_eligible else "reject"
-        html = self._get_template(template, candidate_name=candidate_name, session_token=session_token)
+        html = self._get_template(template, candidate_name=candidate_name, session_token=session_token, interview_id=interview_id)
         
         return await self._send(candidate_email, subject, html)
 
     async def send_post_interview_decision(self, email: str, name: str, recommendation: str) -> bool:
-        from app.utils.constants import EMAIL_SUBJECT_HIRE, EMAIL_SUBJECT_POST_REJECT, EMAIL_SUBJECT_HOLD
+        from app.utils.settings import EMAIL_SUBJECT_HIRE, EMAIL_SUBJECT_POST_REJECT, EMAIL_SUBJECT_HOLD
         
         subjects = {"hire": EMAIL_SUBJECT_HIRE, "reject": EMAIL_SUBJECT_POST_REJECT, "hold": EMAIL_SUBJECT_HOLD}
         rec = recommendation.lower()
@@ -89,5 +91,3 @@ class AzureEmailManager:
 
 #instance for easy import
 azure_email = AzureEmailManager()
-
-

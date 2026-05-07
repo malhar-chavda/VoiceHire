@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+﻿from __future__ import annotations
 import uuid
 import enum
 from datetime import datetime
@@ -116,11 +115,14 @@ class Interview(Base):
     session_token: Mapped[str | None] = mapped_column(   # JWT token for interview
         String(512), nullable=True, unique=True, index=True # 24h expiry
     )
+    session_resumption_token: Mapped[str | None] = mapped_column( # Token for Live API
+        String(512), nullable=True
+    )
     status: Mapped[InterviewStatus] = mapped_column(
         Enum(InterviewStatus, name="interview_status_enum"),
         nullable=False, default=InterviewStatus.PENDING
     )
-
+    # session_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     final_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     transcription_blob_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     notification_sent: Mapped[bool] = mapped_column(
@@ -227,3 +229,5 @@ class FinalReport(Base):
     )
 
     interview: Mapped["Interview"] = relationship("Interview", back_populates="final_report")
+
+

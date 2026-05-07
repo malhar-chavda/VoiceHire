@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import asyncio
 import logging
 from datetime import datetime
@@ -12,11 +11,11 @@ from sqlalchemy import select
 
 from app.services.postgres_db import get_db
 from app.services.document import document_service
-from app.services.azure_openai import azure_openai
-from app.prompts.extraction import RESUME_EXTRACTION_PROMPT, JD_EXTRACTION_PROMPT
+from app.services.azure.azure_openai import azure_openai
+from app.utils.helpers.prompts import RESUME_EXTRACTION_PROMPT, JD_EXTRACTION_PROMPT
 from app.structure.entities import Resume, JobDescription
-from app.models.resume_model import ResumeSchema
-from app.models.jd_model import JDSchema
+from app.models.interview_model import ResumeSchema
+from app.models.interview_model import JDSchema
 from app.services.auth import auth_manager
 
 logger = logging.getLogger(__name__)
@@ -153,3 +152,5 @@ async def upload_documents(
         jd_blob_url=jd_row.jd_blob_url,
         jd_created_at=jd_row.created_at,
     )
+
+

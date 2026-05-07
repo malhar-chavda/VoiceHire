@@ -1,13 +1,12 @@
-from __future__ import annotations
-
+﻿from __future__ import annotations
 import json
 import logging
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.services.azure_openai import azure_openai
-from app.prompts.questions import QUESTION_GENERATION_PROMPT
+from app.services.azure.azure_openai import azure_openai
+from app.utils.helpers.prompts import QUESTION_GENERATION_PROMPT
 
 
 class QuestionSchema(BaseModel): #schema used when extracting questions from llm
@@ -54,7 +53,7 @@ class QuestionService:
             questions = [q.model_dump() for q in result.questions]
 
             if not questions:
-                logger.warning("LLM returned empty questions — using fallback.")
+                logger.warning("LLM returned empty questions using fallback.")
                 return _FALLBACK_QUESTIONS
 
             logger.info("Generated %d questions.", len(questions))
@@ -65,3 +64,5 @@ class QuestionService:
             raise
 
 question_service = QuestionService()
+
+

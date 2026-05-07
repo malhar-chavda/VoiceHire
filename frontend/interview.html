@@ -6,195 +6,412 @@
   <title>VoiceHire — Interview Room</title>
   <meta name="description" content="Your AI-powered voice interview session. Camera and microphone required." />
   <link rel="stylesheet" href="css/styles.css" />
-
-  <!-- Azure Cognitive Services Speech SDK -->
-  <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
-
   <style>
     body { overflow: hidden; }
 
-    /* Full-screen layout for the interview */
-    .interview-layout {
-      position: relative;
-      width: 100vw; height: 100vh;
-    }
+    /* ── Layout ──────────────────────────────────── */
+    .interview-layout { position: relative; width: 100vw; height: 100vh; }
 
-    /* Permission view fills screen */
+    #view-permission, #view-room, #view-complete {
+      position: absolute; inset: 0;
+      display: none; flex-direction: column;
+    }
+    .active { display: flex !important; }
+
+    /* ── Permission screen ───────────────────────── */
     #view-permission {
-      position: absolute; inset: 0;
-      display: none;
-      flex-direction: column;
       align-items: center; justify-content: center;
-      gap: 1.5rem;
-      background: var(--bg);
-      z-index: 20;
+      gap: 1.5rem; background: var(--bg); z-index: 20;
     }
-    #view-permission.active { display: flex; }
+    .perm-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 2.5rem 3rem;
+      max-width: 460px; width: 90%; text-align: center;
+      box-shadow: 0 8px 40px rgba(0,0,0,.45);
+    }
+    .perm-card h1 { font-size: 1.6rem; margin-bottom: .5rem; }
+    .perm-card p  { color: var(--muted); font-size: .92rem; margin-bottom: 1.5rem; }
+    .perm-icon    { font-size: 2.8rem; margin-bottom: 1rem; }
+    #perm-error   { color: #f87171; font-size: .82rem; margin-top: .5rem; min-height: 1.2em; }
 
-
-    /* Room view */
+    /* ── Room layout ─────────────────────────────── */
     #view-room {
-      position: absolute; inset: 0;
-      display: none; flex-direction: column;
-      z-index: 10;
-    }
-    #view-room.active { display: flex; }
-
-    /* Completion view */
-    #view-complete {
-      position: absolute; inset: 0;
-      display: none; flex-direction: column;
-      align-items: center; justify-content: center;
+      flex-direction: row;
       background: var(--bg);
-      z-index: 30;
     }
-    #view-complete.active { display: flex; }
+
+    /* Left panel — camera + transcript */
+    .left-panel {
+      display: flex; flex-direction: column;
+      width: 340px; min-width: 280px; max-width: 360px;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    /* Camera */
+    #camera-wrap {
+      position: relative; width: 100%;
+      aspect-ratio: 4/3; background: #0a0a0f;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+      transition: box-shadow .3s;
+    }
+    #camera-wrap.listening {
+      box-shadow: inset 0 0 0 3px rgba(163,177,138,.55);
+    }
+    #camera-feed {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+    }
+    #camera-placeholder {
+      display: none; align-items: center; justify-content: center;
+      width: 100%; height: 100%;
+      font-size: 3.5rem; color: var(--muted);
+    }
+
+    /* Status bar */
+    .status-bar {
+      display: flex; align-items: center; gap: .6rem;
+      padding: .55rem .9rem;
+      border-bottom: 1px solid var(--border);
+      font-size: .8rem; color: var(--muted);
+    }
+    .sdot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--muted); flex-shrink: 0;
+      transition: background .3s;
+    }
+    .sdot.live         { background: #4ade80; animation: pulse-green 2s infinite; }
+    .sdot.playing      { background: #60a5fa; animation: pulse-blue  1.2s infinite; }
+    .sdot.listening    { background: #a3b18a; }
+    .sdot.thinking     { background: #facc15; animation: pulse-yel 1s infinite; }
+    .sdot.reconnecting { background: #f97316; animation: pulse-or  1s infinite; }
+    .sdot.interrupted  { background: #f87171; animation: pulse-red .4s infinite; }
+
+    @keyframes pulse-green { 0%,100%{opacity:1} 50%{opacity:.45} }
+    @keyframes pulse-blue  { 0%,100%{opacity:1} 50%{opacity:.35} }
+    @keyframes pulse-yel   { 0%,100%{opacity:1} 50%{opacity:.4}  }
+    @keyframes pulse-or    { 0%,100%{opacity:1} 50%{opacity:.4}  }
+    @keyframes pulse-red   { 0%,100%{opacity:1} 50%{opacity:.3}  }
+
+    /* Waveform */
+    .waveform-wrap {
+      padding: .5rem .75rem;
+      border-bottom: 1px solid var(--border);
+      height: 44px; box-sizing: content-box;
+    }
+    #waveform-canvas { width: 100%; height: 100%; display: block; }
+
+    /* Transcript */
+    .transcript-wrap {
+      flex: 1; overflow-y: auto; padding: .75rem .9rem;
+      display: flex; flex-direction: column; gap: .5rem;
+    }
+    .transcript-line {
+      font-size: .8rem; line-height: 1.5;
+      padding: .35rem .55rem; border-radius: 8px;
+      max-width: 96%;
+    }
+    .transcript-line.ai        { background: rgba(96,165,250,.1); color: #93c5fd; align-self: flex-start; }
+    .transcript-line.candidate { background: rgba(163,177,138,.12); color: #d4e6c3; align-self: flex-end; }
+    .transcript-line.temp      { opacity: .65; }
+    .transcript-empty          { color: var(--muted); font-size: .8rem; text-align: center; margin-top: 2rem; }
+
+    /* ── Right panel ─────────────────────────────── */
+    .right-panel {
+      flex: 1; display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top toolbar */
+    .room-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .7rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .room-brand { font-weight: 700; font-size: 1rem; letter-spacing: .5px; }
+    #q-counter  { font-size: .82rem; color: var(--muted); }
+    #open-history-btn {
+      font-size: .78rem; padding: .35rem .75rem;
+      border: 1px solid var(--border); border-radius: 6px;
+      background: transparent; color: var(--muted); cursor: pointer;
+      transition: all .2s;
+    }
+    #open-history-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* Progress bar */
+    .progress-wrap {
+      height: 3px; background: var(--border);
+    }
+    #progress-fill {
+      height: 100%; background: var(--primary);
+      transition: width .6s ease; width: 0%;
+    }
+
+    /* Question panel */
+    .question-panel {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 2rem;
+      transition: background .2s;
+    }
+    .question-panel.interrupt-flash {
+      animation: flash-red .4s ease;
+    }
+    @keyframes flash-red {
+      0%   { background: rgba(248,113,113,.15); }
+      100% { background: transparent; }
+    }
+
+    /* Follow-up banner */
+    #followup-banner {
+      display: none; align-items: center; gap: .6rem;
+      padding: .55rem 1rem; border-radius: 8px;
+      background: rgba(251,191,36,.1); border: 1px solid rgba(251,191,36,.3);
+      color: #fbbf24; font-size: .82rem; font-weight: 600;
+      margin-bottom: 1.5rem;
+      animation: fadein .3s ease;
+    }
+    #followup-banner.visible { display: flex; }
+    @keyframes fadein { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+
+    #q-tag {
+      font-size: .78rem; font-weight: 600; letter-spacing: .8px;
+      text-transform: uppercase; color: var(--primary);
+      margin-bottom: .75rem;
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .followup-chip {
+      font-size: .68rem; padding: .15rem .45rem; border-radius: 4px;
+      background: rgba(251,191,36,.15); color: #fbbf24; border: 1px solid rgba(251,191,36,.3);
+    }
+
+    #question-text {
+      font-size: clamp(1.1rem, 2vw, 1.4rem);
+      font-weight: 600; line-height: 1.55;
+      text-align: center; max-width: 640px;
+      color: var(--text);
+    }
+
+    /* Footer */
+    .room-footer {
+      display: flex; align-items: center; justify-content: center;
+      gap: .75rem; padding: .85rem 1.2rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .nav-btn {
+      padding: .4rem .85rem; border-radius: 6px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--muted); font-size: .8rem; cursor: pointer;
+      transition: all .2s;
+    }
+    .nav-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+    .nav-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+    /* Loading overlay */
+    #loading-overlay {
+      position: absolute; inset: 0; z-index: 10;
+      background: rgba(10,10,15,.65);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 1rem;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── History Drawer ───────────────────────────── */
+    #history-overlay {
+      display: none; position: fixed; inset: 0; z-index: 40;
+      background: rgba(0,0,0,.5);
+    }
+    #history-overlay.open { display: block; }
+
+    #history-drawer {
+      position: fixed; top: 0; left: 0; bottom: 0;
+      width: 320px; z-index: 50;
+      background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      transform: translateX(-100%);
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    #history-drawer.open { transform: translateX(0); }
+
+    .drawer-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      font-weight: 700; font-size: .95rem;
+    }
+    #close-history-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 1.3rem; line-height: 1;
+      padding: .2rem .4rem; border-radius: 4px;
+      transition: color .2s;
+    }
+    #close-history-btn:hover { color: var(--text); }
+
+    #history-list {
+      flex: 1; overflow-y: auto; padding: .75rem;
+      display: flex; flex-direction: column; gap: .5rem;
+    }
+    .history-item {
+      padding: .7rem .85rem; border-radius: 8px;
+      border: 1px solid var(--border);
+      cursor: pointer; transition: border-color .2s, background .2s;
+    }
+    .history-item:hover { border-color: var(--primary); background: rgba(163,177,138,.07); }
+    .history-item.active-q { border-color: var(--primary); background: rgba(163,177,138,.1); }
+    .history-item-meta {
+      display: flex; align-items: center; gap: .5rem;
+      margin-bottom: .35rem;
+    }
+    .history-item-num  { font-size: .72rem; font-weight: 700; color: var(--primary); text-transform: uppercase; }
+    .history-followup-tag { font-size: .68rem; color: #fbbf24; }
+    .history-item-text { font-size: .8rem; color: var(--muted); line-height: 1.45; }
+
+    /* ── Completion screen ───────────────────────── */
+    #view-complete {
+      align-items: center; justify-content: center;
+      background: var(--bg); gap: 1.5rem;
+    }
+    .complete-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 2.5rem 3rem;
+      max-width: 500px; width: 90%; text-align: center;
+    }
+    .complete-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .complete-card h2 { font-size: 1.5rem; margin-bottom: .5rem; }
+    .score-row {
+      display: flex; justify-content: center; gap: 2rem;
+      margin: 1.5rem 0;
+    }
+    .score-item label { display: block; font-size: .75rem; color: var(--muted); margin-bottom: .25rem; }
+    .score-item span  { font-size: 1.4rem; font-weight: 700; color: var(--primary); }
+    #c-summary { font-size: .88rem; color: var(--muted); line-height: 1.6; }
+
+    /* ── Toasts ──────────────────────────────────── */
+    #toast-area {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      display: flex; flex-direction: column; gap: .5rem;
+      z-index: 9999;
+    }
+    .toast {
+      padding: .65rem 1rem; border-radius: 8px;
+      font-size: .82rem; max-width: 300px;
+      animation: toast-in .25s ease;
+    }
+    @keyframes toast-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+    .toast.info    { background: #1e1b4b; border: 1px solid #312e81; color: #a5b4fc; }
+    .toast.warn    { background: #451a03; border: 1px solid #78350f; color: #fcd34d; }
+    .toast.error   { background: #7f1d1d; border: 1px solid #991b1b; color: #fca5a5; }
+    .toast.success { background: #064e3b; border: 1px solid #065f46; color: #6ee7b7; }
   </style>
 </head>
 <body>
-  <div class="bg-orb bg-orb-1"></div>
-  <div class="bg-orb bg-orb-2"></div>
-  <div id="toast-area"></div>
+<div class="interview-layout">
 
-  <div class="interview-layout">
-
-    <!-- ══ VIEW: Permission / Welcome ══════════════════════════════ -->
-    <div id="view-permission">
-      <div class="permission-card glass-card fade-in">
-        <div class="permission-icon">🎤</div>
-        <h2>Ready for your interview?</h2>
-        <p>
-          This session requires <strong>camera</strong> and <strong>microphone</strong> access.
-          Your microphone stays on throughout the interview — speak naturally after each question plays.
-        </p>
-
-        <div style="margin:1.5rem 0;display:flex;flex-direction:column;gap:0.6rem;text-align:left;">
-          <div style="display:flex;gap:0.75rem;align-items:flex-start;font-size:0.85rem;color:var(--muted);">
-            <span>🎥</span><span>Camera is displayed locally only — not recorded or sent to the server.</span>
-          </div>
-          <div style="display:flex;gap:0.75rem;align-items:flex-start;font-size:0.85rem;color:var(--muted);">
-            <span>🎙️</span><span>Microphone stays on. Your speech is transcribed and evaluated seamlessly when you stop talking.</span>
-          </div>
-          <div style="display:flex;gap:0.75rem;align-items:flex-start;font-size:0.85rem;color:var(--muted);">
-            <span>🔊</span><span>Make sure your speakers/headphones are on — questions will be read aloud.</span>
-          </div>
-        </div>
-
-        <p id="perm-error" style="color:var(--error);font-size:0.82rem;min-height:1.1rem;margin-bottom:0.75rem;"></p>
-
-        <button id="start-btn" class="btn btn-primary btn-full btn-lg">
-          Start Interview
-        </button>
-      </div>
+  <!-- ── Permission View ────────────────────────── -->
+  <div id="view-permission">
+    <div class="perm-card">
+      <div class="perm-icon">🎙️</div>
+      <h1>Ready for your interview?</h1>
+      <p>We need camera and microphone access to run your AI-powered interview session.</p>
+      <button id="start-btn" class="btn-primary">Grant Access &amp; Start</button>
+      <p id="perm-error"></p>
     </div>
-
-    <!-- ══ VIEW: Interview Room ════════════════════════════════════ -->
-    <div id="view-room">
-
-      <!-- Header -->
-      <header class="room-header">
-        <div class="room-brand">⚡ VoiceHire</div>
-
-        <div class="room-progress">
-          <span class="q-counter" id="q-counter">Loading…</span>
-          <div class="progress-bar" style="width:200px;">
-            <div class="progress-fill" id="progress-fill" style="width:0%"></div>
-          </div>
-        </div>
-
-        <div class="room-status">
-          <div class="sdot" id="sdot"></div>
-          <span id="status-text">Initialising…</span>
-        </div>
-      </header>
-
-      <!-- Body: Question | Camera+Transcript -->
-      <div class="room-body">
-
-        <!-- Left: question display -->
-        <div class="question-panel">
-          <div class="q-tag" id="q-tag">Question 1</div>
-
-          <div class="question-text" id="question-text">
-            <div class="loading-wrap">
-              <div class="spinner"></div>
-              <span>Loading your first question…</span>
-            </div>
-          </div>
-
-          <!-- Score feedback for previous answer -->
-          <div id="score-feedback" class="score-feedback" hidden>
-            <div class="score-pill">—</div>
-            <span class="score-msg">—</span>
-          </div>
-        </div>
-
-        <!-- Right: camera + transcript -->
-        <aside class="right-panel">
-
-          <!-- Camera -->
-          <div class="camera-wrap" id="camera-wrap">
-            <video id="camera-feed" autoplay muted playsinline></video>
-            <!-- Shown when camera is unavailable -->
-            <div id="camera-placeholder" style="display:none;align-items:center;justify-content:center;width:100%;height:100%;flex-direction:column;gap:0.5rem;color:var(--muted);font-size:0.85rem;">
-              <span style="font-size:2rem;">🎙️</span>
-              <span>Audio only</span>
-            </div>
-            <div class="cam-overlay">
-              <div class="rec-dot" id="rec-dot"></div>
-              <span class="cam-label">LIVE</span>
-            </div>
-          </div>
-
-          <!-- Transcript -->
-          <div class="transcript-label">Your answer</div>
-          <div class="transcript-box" id="transcript">
-            <em class="transcript-empty">Your speech will appear here…</em>
-          </div>
-
-        </aside>
-      </div>
-
-      <!-- Footer: waveform -->
-      <footer class="room-footer">
-        <div class="waveform-wrap">
-          <canvas id="waveform-canvas"></canvas>
-        </div>
-      </footer>
-
-    </div>
-
-    <!-- ══ VIEW: Completion ════════════════════════════════════════ -->
-    <div id="view-complete">
-      <div class="complete-card glass-card fade-in">
-        <div class="complete-icon" id="c-icon">🎉</div>
-        <h2>Interview Complete!</h2>
-        <p class="subtext">Thank you for your time. Here's how you did:</p>
-
-        <div class="complete-stats">
-          <div class="stat-box">
-            <div class="stat-num" id="c-score">—</div>
-            <div class="stat-lbl">Final Score</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-num" id="c-rec" style="font-size:1.2rem;">—</div>
-            <div class="stat-lbl">Recommendation</div>
-          </div>
-        </div>
-
-        <p id="c-summary" style="color:var(--muted);font-size:0.88rem;line-height:1.7;text-align:left;padding:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);"></p>
-
-        <p style="color:var(--muted);font-size:0.8rem;margin-top:1.5rem;">
-          You'll receive an email shortly with your results. You can close this window.
-        </p>
-      </div>
-    </div>
-
   </div>
 
-  <!-- Hidden audio element for TTS playback -->
-  <audio id="tts-audio" style="display:none;" preload="none"></audio>
+  <!-- ── Room View ──────────────────────────────── -->
+  <div id="view-room">
 
-  <script type="module" src="js/interview.js"></script>
+    <!-- History Overlay + Drawer -->
+    <div id="history-overlay"></div>
+    <div id="history-drawer" role="dialog" aria-label="Question History">
+      <div class="drawer-header">
+        <span>📋 Question History</span>
+        <button id="close-history-btn" aria-label="Close">✕</button>
+      </div>
+      <div id="history-list">
+        <p style="color:var(--muted);font-size:.82rem;text-align:center;padding:2rem 0;">No questions asked yet.</p>
+      </div>
+    </div>
+
+    <!-- Left Panel -->
+    <div class="left-panel">
+      <div id="camera-wrap">
+        <video id="camera-feed" autoplay muted playsinline></video>
+        <div id="camera-placeholder">👤</div>
+      </div>
+      <div class="status-bar">
+        <span class="sdot" id="sdot"></span>
+        <span id="status-text">Connecting…</span>
+      </div>
+      <div class="waveform-wrap">
+        <canvas id="waveform-canvas"></canvas>
+      </div>
+      <div class="transcript-wrap" id="transcript">
+        <p class="transcript-empty">Transcript will appear here…</p>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="right-panel">
+      <!-- Loading overlay -->
+      <div id="loading-overlay">
+        <div class="spinner"></div>
+        <span style="color:var(--muted);font-size:.85rem;">Connecting to AI…</span>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="room-toolbar">
+        <span class="room-brand">VoiceHire</span>
+        <span id="q-counter">—</span>
+        <button id="open-history-btn">📋 All Questions</button>
+      </div>
+
+      <!-- Progress -->
+      <div class="progress-wrap"><div id="progress-fill"></div></div>
+
+      <!-- Question Panel -->
+      <div class="question-panel">
+        <div id="followup-banner">🔍 Follow-up Question</div>
+        <div id="q-tag">Question</div>
+        <p id="question-text">Waiting for the first question…</p>
+      </div>
+
+      <!-- Footer Nav -->
+      <div class="room-footer">
+        <button id="prev-q-btn" class="nav-btn" disabled>← Prev</button>
+        <button id="next-q-btn" class="nav-btn" disabled>Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Completion View ────────────────────────── -->
+  <div id="view-complete">
+    <div class="complete-card">
+      <div class="complete-icon">✅</div>
+      <h2>Interview Complete</h2>
+      <div class="score-row">
+        <div class="score-item"><label>Score</label><span id="c-score">—</span></div>
+        <div class="score-item"><label>Recommendation</label><span id="c-rec">—</span></div>
+      </div>
+      <p id="c-summary"></p>
+    </div>
+  </div>
+
+</div><!-- .interview-layout -->
+
+<!-- Toast area -->
+<div id="toast-area"></div>
+
+<script src="js/interview.js"></script>
 </body>
 </html>

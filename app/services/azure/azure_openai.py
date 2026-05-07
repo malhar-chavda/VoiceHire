@@ -49,3 +49,4 @@ class AzureOpenAIManager:
 
 azure_openai = AzureOpenAIManager()
 
+
