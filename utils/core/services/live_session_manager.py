@@ -81,7 +81,7 @@ class LiveSessionManager:
         # Google genai client 
         self.client = genai.Client(
             http_options={"api_version": "v1beta"},
-            api_key="AIzaSyA_npICpIOqsOdQ5bNnOVPs5CSWvxZrwAE",
+            api_key=settings.GEMINI_API_KEY,
         )
 
         self.session = None
