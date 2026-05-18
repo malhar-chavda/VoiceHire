@@ -60,7 +60,6 @@ class Config(BaseSettings):
     # --- PIPELINE THRESHOLDS ---
     MATCH_SCORE_THRESHOLD: float = 60.0
     QUICK_SCORE_THRESHOLD: float = 0.6
-    FOLLOW_UP_THRESHOLD: float = 7.0
     MAX_FOLLOWUPS_PER_QUESTION: int = 2
     MAX_INTERVIEW_QUESTIONS: int = 10
     MIN_INTERVIEW_QUESTIONS: int = 5
