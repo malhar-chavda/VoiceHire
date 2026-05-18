@@ -10,7 +10,7 @@
     body { overflow: hidden; }
 
     /* ── Layout ──────────────────────────────────── */
-    .interview-layout { position: relative; width: 100vw; height: 100vh; }
+    .interview-layout { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
 
     #view-permission, #view-room, #view-complete {
       position: absolute; inset: 0;
@@ -21,18 +21,24 @@
     /* ── Permission screen ───────────────────────── */
     #view-permission {
       align-items: center; justify-content: center;
-      gap: 1.5rem; background: var(--bg); z-index: 20;
+      background: var(--bg); z-index: 20;
     }
     .perm-card {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: 16px; padding: 2.5rem 3rem;
-      max-width: 460px; width: 90%; text-align: center;
-      box-shadow: 0 8px 40px rgba(0,0,0,.45);
+      border-radius: 24px; padding: 3.5rem 2.5rem;
+      max-width: 480px; width: 90%; text-align: center;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      position: relative; overflow: hidden;
     }
-    .perm-card h1 { font-size: 1.6rem; margin-bottom: .5rem; }
-    .perm-card p  { color: var(--muted); font-size: .92rem; margin-bottom: 1.5rem; }
-    .perm-icon    { font-size: 2.8rem; margin-bottom: 1rem; }
-    #perm-error   { color: #f87171; font-size: .82rem; margin-top: .5rem; min-height: 1.2em; }
+    .perm-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--grad); opacity: 0.5;
+    }
+    .perm-card h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: .75rem; background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .perm-card p  { color: var(--muted); font-size: .95rem; margin-bottom: 2rem; line-height: 1.6; }
+    .perm-icon    { font-size: 3.5rem; margin-bottom: 1.5rem; display: block; filter: drop-shadow(0 0 15px rgba(163,177,138,0.3)); }
+    #perm-error   { color: #f87171; font-size: .85rem; margin-top: 1rem; min-height: 1.2em; }
 
     /* ── Room layout ─────────────────────────────── */
     #view-room {
@@ -316,14 +322,21 @@
 </head>
 <body>
 <div class="interview-layout">
+  <!-- Background orbs -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="bg-orb bg-orb-3"></div>
 
   <!-- ── Permission View ────────────────────────── -->
   <div id="view-permission">
-    <div class="perm-card">
+    <div class="perm-card glass-card">
       <div class="perm-icon">🎙️</div>
       <h1>Ready for your interview?</h1>
-      <p>We need camera and microphone access to run your AI-powered interview session.</p>
-      <button id="start-btn" class="btn-primary">Grant Access &amp; Start</button>
+      <p>Your session is ready. We need camera and microphone access to start the AI-powered voice interview.</p>
+      <button id="start-btn" class="btn btn-primary btn-lg btn-full">
+        <span id="start-btn-text">Grant Access & Start</span>
+        <span id="start-btn-icon">⚡</span>
+      </button>
       <p id="perm-error"></p>
     </div>
   </div>
@@ -399,11 +412,7 @@
     <div class="complete-card">
       <div class="complete-icon">✅</div>
       <h2>Interview Complete</h2>
-      <div class="score-row">
-        <div class="score-item"><label>Score</label><span id="c-score">—</span></div>
-        <div class="score-item"><label>Recommendation</label><span id="c-rec">—</span></div>
-      </div>
-      <p id="c-summary"></p>
+      <p id="c-feedback" style="margin-top: 1.5rem; text-align: left; line-height: 1.6; color: var(--muted); font-size: 0.95rem;"></p>
     </div>
   </div>
 

@@ -77,6 +77,7 @@ let waveAnimId      = null;
 let questionsHistory  = [];   // [{order, text, is_followup}]
 let currentLiveQuestion = null;
 let historyViewIndex  = -1;   // -1 = showing live
+let introPhaseActive  = true; // BUG 1 FIX: tracks whether we're still in the intro phase
 
 // ─────────────────────────────────────────────────────────────
 // Helpers
@@ -231,10 +232,7 @@ function showCompletion(msg) {
     viewRoom.classList.remove('active');
     viewComplete.classList.add('active');
 
-    document.getElementById('c-score').textContent = msg.final_score != null ? msg.final_score : '—';
-    const recMap = { hire: '✅ Hire', hold: '⏸ Hold', reject: '❌ Reject' };
-    document.getElementById('c-rec').textContent = recMap[msg.recommendation] || msg.recommendation || '—';
-    document.getElementById('c-summary').textContent = msg.overall_summary || '';
+    document.getElementById('c-feedback').textContent = msg.candidate_feedback || 'Thank you for your time. The interview is now complete.';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -318,8 +316,17 @@ async function startUplink() {
             sp.onaudioprocess = (e) => {
                 if (socket && socket.readyState !== WebSocket.OPEN) return;
                 const f32 = e.inputBuffer.getChannelData(0);
+                
+                let peak = 0;
+                for (let i = 0; i < f32.length; i++) {
+                    const abs = Math.abs(f32[i]);
+                    if (abs > peak) peak = abs;
+                }
+
                 const i16 = new Int16Array(f32.length);
-                f32.forEach((s, i) => { i16[i] = Math.max(-32768, Math.min(32767, s * 32767)); });
+                if (peak >= 0.015) {
+                    f32.forEach((s, i) => { i16[i] = Math.max(-32768, Math.min(32767, s * 32767)); });
+                }
                 if (socket) socket.send(i16.buffer);
             };
             source.connect(sp);
@@ -486,8 +493,16 @@ function handleServerEvent(msg) {
     // ── Turn started ──
     if (msg.type === 'turn_started') {
         setStatus('playing');
+
         const spinner = document.getElementById('loading-overlay');
         if (spinner) spinner.style.display = 'none';
+
+        // Show a contextual placeholder during the intro phase so the user
+        // doesn't see "Waiting for the first question..." while introducing themselves.
+        if (introPhaseActive && qText && qText.textContent === 'Waiting for the first question…') {
+            qText.textContent = 'Listening to your introduction…';
+            if (qTag) qTag.textContent = 'Introduction';
+        }
         return;
     }
 
@@ -573,9 +588,10 @@ if (!SESSION_TOKEN || !interviewId) {
     viewPerm.classList.add('active');
 
     startBtn.addEventListener('click', async () => {
+        const btnText = document.getElementById('start-btn-text');
         permError.textContent = '';
         startBtn.disabled = true;
-        startBtn.textContent = 'Starting…';
+        if (btnText) btnText.textContent = 'Starting…';
 
         try {
             await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
@@ -585,7 +601,7 @@ if (!SESSION_TOKEN || !interviewId) {
             } catch (e) {
                 permError.textContent = 'Microphone access is required. Please allow and retry.';
                 startBtn.disabled = false;
-                startBtn.textContent = 'Grant Access & Start';
+                if (btnText) btnText.textContent = 'Grant Access & Start';
                 return;
             }
         }

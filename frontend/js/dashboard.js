@@ -80,15 +80,16 @@ function recBadge(r) {
 // Generates recruiter status badges with fallback handling for unassigned scenarios.
 // Wraps statusBadge to handle null/undefined recruitment statuses gracefully with a muted placeholder.
 
-function scoreBar(val, max = 10) {
+function scoreBar(val, max = 100) {
   if (val === null || val === undefined) return '<span class="muted-text">—</span>'
   const pct = Math.min((val / max) * 100, 100)
-  const colorClass = val >= 7 ? 'bar-success' : val >= 4 ? 'bar-warn' : 'bar-error'
+  // Color logic based on 0-100 scale: 70+ green, 40+ yellow, else red
+  const colorClass = val >= (max * 0.7) ? 'bar-success' : val >= (max * 0.4) ? 'bar-warn' : 'bar-error'
   return `<div class="score-bar-wrap">
     <div class="score-bar-track">
       <div class="score-bar-fill ${colorClass}" style="width:${pct}%"></div>
     </div>
-    <span class="score-bar-label">${Number(val).toFixed(1)}</span>
+    <span class="score-bar-label">${Number(val).toFixed(1)}${max === 100 ? '%' : ''}</span>
   </div>`
 }
 // Converts integer scores into colored progress bar HTML injectables natively grading candidates.
@@ -150,10 +151,10 @@ async function loadAll() {
   setRefreshing(true)
 
   // Show per-section loading skeletons immediately
-  setSectionLoading('recent-table', 5, 'Loading…')
+  setSectionLoading('recent-table', 6, 'Loading…')
   setSectionLoading('resumes-table', 4, 'Loading…')
   setSectionLoading('jds-table', 3, 'Loading…')
-  setSectionLoading('iv-table', 7, 'Loading…')
+  setSectionLoading('iv-table', 9, 'Loading…')
 
   const [resumesResult, jdsResult, interviewsResult] = await Promise.allSettled([
     listResumes(token),
@@ -259,7 +260,7 @@ function renderStats() {
   if (!tbody) return
 
   if (recent.length === 0) {
-    tbody.innerHTML = emptyRow(5, '📭 No interviews yet. Send your first evaluation to get started.')
+    tbody.innerHTML = emptyRow(6, '📭 No interviews yet. Send your first evaluation to get started.')
     return
   }
 
@@ -394,7 +395,7 @@ function renderInterviews(search = '') {
   if (!tbody) return
 
   tbody.innerHTML = rows.length === 0
-    ? emptyRow(8, interviews.length === 0
+    ? emptyRow(9, interviews.length === 0
         ? '📭 No interviews found. Evaluate a candidate to get started.'
         : '🔍 No interviews match this filter.')
     : rows.map(i => {
@@ -470,7 +471,7 @@ function renderReports() {
     const rec = safeStr(i.recommendation).toLowerCase()
     const col = recColors[rec] ?? '#94a3b8'
     return `
-    <div class="report-card glass-card" data-id="${i.interview_id}" style="cursor:pointer">
+    <div class="report-card" data-id="${i.interview_id}" style="cursor:pointer">
       <div class="report-header">
         <div class="avatar avatar-lg">${esc(initial(i.candidate_name))}</div>
         <div class="report-meta">
@@ -486,7 +487,7 @@ function renderReports() {
         </div>
         <div class="report-score-item">
           <div class="rs-label">Interview</div>
-          <div class="rs-val">${i.final_score != null ? Number(i.final_score).toFixed(1) + '/10' : '—'}</div>
+          <div class="rs-val">${i.final_score != null ? Number(i.final_score).toFixed(1) + '%' : '—'}</div>
         </div>
       </div>
       <div class="report-rec" style="color:${col}">${(rec || 'pending').toUpperCase()}</div>
@@ -518,8 +519,16 @@ async function openReportModal(id) {
     const topicsHtml = (report.topics_covered || []).map(t => `<span class="badge badge-primary">${esc(t)}</span>`).join(' ')
     
     // Per question scores — now includes candidate answer
-    const scoresHtml = report.per_question_scores
+    const scoresHtml = (report.per_question_scores && !Array.isArray(report.per_question_scores))
       ? Object.entries(report.per_question_scores).map(([k, res]) => {
+          if (typeof res === 'string' || Array.isArray(res)) {
+            // Handle the "strengths/weaknesses" array format if it exists
+            return `
+            <div style="margin-bottom:1rem; padding-bottom:1rem; border-bottom: 1px dashed var(--border)">
+              <div style="font-weight:600; font-size:0.95rem; line-height:1.4; text-transform:capitalize;">${esc(k)}</div>
+              <div style="color:var(--muted);font-size:0.85rem; margin-top:0.4rem;line-height:1.5;">${Array.isArray(res) ? res.join(', ') : esc(res)}</div>
+            </div>`
+          }
           const scoreVal = Number(res.score ?? 0)
           const scoreColor = scoreVal >= 7 ? 'var(--success)' : scoreVal >= 4 ? 'var(--warn)' : 'var(--error)'
           const answerHtml = res.answer
@@ -538,7 +547,7 @@ async function openReportModal(id) {
             <div style="color:var(--muted);font-size:0.85rem; margin-top:0.4rem;line-height:1.5;">${esc(res.feedback)}</div>
           </div>`
         }).join('')
-      : '<em class="muted-text">No question scores available</em>'
+      : '<em class="muted-text">No analysis available</em>'
       
     content.innerHTML = `
       <div class="report-section">
